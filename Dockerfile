@@ -1,4 +1,3 @@
-```dockerfile
 FROM python:3.11-slim
 
 ENV PYTHONUNBUFFERED=1
@@ -23,4 +22,3 @@ RUN yt-dlp --version \
 RUN mkdir -p /app/downloads
 
 CMD ["sh", "-c", "gunicorn --workers 1 --threads 4 --timeout 300 --bind 0.0.0.0:${PORT} app:app"]
-```
