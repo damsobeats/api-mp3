@@ -18,7 +18,6 @@ def download_audio():
             400,
         )
 
-    # Dossier de travail temporaire isolé
     temp_dir = tempfile.mkdtemp()
 
     @after_this_request
@@ -27,24 +26,18 @@ def download_audio():
         return response
 
     safe_title = f"{artiste} - {titre}".replace("/", "_").replace("\\", "_")
-    output_tmpl = os.path.join(temp_dir, "%(title)s.%(ext)s")
-    requete = f"ytsearch1:{artiste} - {titre} audio"
+    target_output = os.path.join(temp_dir, "output.%(ext)s")
+    final_mp3 = os.path.join(temp_dir, "output.mp3")
 
-    options = {
+    # Options pour la recherche et extraction
+    ydl_opts = {
         "format": "bestaudio/best",
         "cookiefile": "cookies.txt" if os.path.exists("cookies.txt") else None,
         "extractor_args": {
             "youtube": {
-                "player_client": ["android_music", "android", "ios"],
+                "player_client": ["android", "web"],
                 "player_skip": ["webpage", "configs"],
             }
-        },
-        "http_headers": {
-            "User-Agent": (
-                "com.google.android.apps.youtube.music/6.20.51 (Linux; U;"
-                " Android 14; fr_FR; Pixel 7 Pro) gzip"
-            ),
-            "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
         },
         "postprocessors": [
             {
@@ -53,43 +46,55 @@ def download_audio():
                 "preferredquality": "192",
             }
         ],
-        "outtmpl": output_tmpl,
+        "outtmpl": target_output,
         "noplaylist": True,
-        "quiet": False,
-        "no_warnings": False,
+        "quiet": True,
+        "no_warnings": True,
         "nocheckcertificate": True,
     }
 
     try:
-        with yt_dlp.YoutubeDL(options) as ydl:
-            ydl.download([requete])
+        query = f"ytsearch1:{artiste} {titre} audio"
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # Recherche explicite de la vidéo
+            search_results = ydl.extract_info(query, download=False)
+            if not search_results or "entries" not in search_results or not search_results["entries"]:
+                return jsonify({"erreur": "Aucune vidéo trouvée sur YouTube."}), 404
 
-        # Recherche automatique du fichier audio généré dans le dossier temporaire
+            video_info = search_results["entries"][0]
+            video_url = video_info.get("webpage_url") or video_info.get("url")
+
+            # Téléchargement direct de l'URL résolue
+            ydl.download([video_url])
+
+        # Vérification du fichier MP3 généré
+        if os.path.exists(final_mp3) and os.path.getsize(final_mp3) > 1000:
+            return send_file(
+                final_mp3,
+                as_attachment=True,
+                download_name=f"{safe_title}.mp3",
+                mimetype="audio/mpeg",
+            )
+
+        # Fallback de détection si FFmpeg a conservé une autre extension
         generated_files = [
             os.path.join(temp_dir, f)
             for f in os.listdir(temp_dir)
             if os.path.isfile(os.path.join(temp_dir, f))
-            and not f.endswith(".part")
-            and not f.endswith(".ytdl")
+            and not f.endswith((".part", ".ytdl"))
         ]
 
-        if not generated_files:
-            return (
-                jsonify({
-                    "erreur": "Aucun fichier n'a été produit par le téléchargement."
-                }),
-                500,
+        if generated_files:
+            return send_file(
+                generated_files[0],
+                as_attachment=True,
+                download_name=f"{safe_title}.mp3",
+                mimetype="audio/mpeg",
             )
 
-        # Sélection prioritaire du fichier MP3 généré par FFmpeg
-        mp3_files = [f for f in generated_files if f.lower().endswith(".mp3")]
-        target_file = mp3_files[0] if mp3_files else generated_files[0]
-
-        return send_file(
-            target_file,
-            as_attachment=True,
-            download_name=f"{safe_title}.mp3",
-            mimetype="audio/mpeg",
+        return (
+            jsonify({"erreur": "Le fichier audio n'a pas pu être extrait."}),
+            500,
         )
 
     except Exception as e:
