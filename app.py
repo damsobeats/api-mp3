@@ -17,7 +17,7 @@ def download_audio():
     
     options = {
         'format': 'bestaudio/best',
-        'cookiefile': 'cookies.txt',  # <-- Ligne à ajouter ici
+        'cookiefile': 'cookies.txt',
         'extractor_args': {'youtube': {'player_client': ['android']}},
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
@@ -26,8 +26,6 @@ def download_audio():
         }],
         'outtmpl': filename.replace('.mp3', ''),
     }
-        'outtmpl': filename.replace('.mp3', ''),
-    } 
 
     try:
         with yt_dlp.YoutubeDL(options) as ydl:
