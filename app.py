@@ -13,10 +13,7 @@ def download_audio():
     titre = request.args.get("titre")
 
     if not artiste or not titre:
-        return (
-            jsonify({"erreur": "Veuillez fournir un artiste et un titre."}),
-            400,
-        )
+        return jsonify({"erreur": "Veuillez fournir un artiste et un titre."}), 400
 
     temp_dir = tempfile.mkdtemp()
 
@@ -29,14 +26,14 @@ def download_audio():
     target_output = os.path.join(temp_dir, "output.%(ext)s")
     final_mp3 = os.path.join(temp_dir, "output.mp3")
 
-    # Options pour la recherche et extraction
+    # Configuration optimisée 
     ydl_opts = {
         "format": "bestaudio/best",
         "cookiefile": "cookies.txt" if os.path.exists("cookies.txt") else None,
         "extractor_args": {
             "youtube": {
-                "player_client": ["android", "web"],
-                "player_skip": ["webpage", "configs"],
+                # Utilise les clients officiels pour éviter le captcha sans casser le lecteur
+                "player_client": ["android", "web"]
             }
         },
         "postprocessors": [
@@ -56,7 +53,7 @@ def download_audio():
     try:
         query = f"ytsearch1:{artiste} {titre} audio"
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Recherche explicite de la vidéo
+            # On cherche l'URL de la vidéo
             search_results = ydl.extract_info(query, download=False)
             if not search_results or "entries" not in search_results or not search_results["entries"]:
                 return jsonify({"erreur": "Aucune vidéo trouvée sur YouTube."}), 404
@@ -64,10 +61,10 @@ def download_audio():
             video_info = search_results["entries"][0]
             video_url = video_info.get("webpage_url") or video_info.get("url")
 
-            # Téléchargement direct de l'URL résolue
+            # On télécharge l'audio
             ydl.download([video_url])
 
-        # Vérification du fichier MP3 généré
+        # Envoi du fichier MP3 généré
         if os.path.exists(final_mp3) and os.path.getsize(final_mp3) > 1000:
             return send_file(
                 final_mp3,
@@ -76,7 +73,7 @@ def download_audio():
                 mimetype="audio/mpeg",
             )
 
-        # Fallback de détection si FFmpeg a conservé une autre extension
+        # Envoi de secours si FFmpeg a laissé une autre extension
         generated_files = [
             os.path.join(temp_dir, f)
             for f in os.listdir(temp_dir)
@@ -92,10 +89,7 @@ def download_audio():
                 mimetype="audio/mpeg",
             )
 
-        return (
-            jsonify({"erreur": "Le fichier audio n'a pas pu être extrait."}),
-            500,
-        )
+        return jsonify({"erreur": "Le fichier n'a pas pu être extrait."}), 500
 
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
