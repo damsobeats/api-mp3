@@ -18,7 +18,6 @@ def download_audio():
     options = {
         'format': 'bestaudio/best',
         'cookiefile': 'cookies.txt',
-        'extractor_args': {'youtube': {'player_client': ['web', 'android']}},
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
@@ -26,6 +25,8 @@ def download_audio():
         }],
         'outtmpl': filename.replace('.mp3', ''),
         'noplaylist': True,
+        'quiet': True,
+        'nocheckcertificate': True,
     }
 
     try:
