@@ -16,7 +16,7 @@ def download_audio():
     filename = f"{artiste} - {titre}.mp3".replace("/", "_")
     
     options = {
-        'format': 'bestaudio/best',
+        'format': 'best',
         'cookiefile': 'cookies.txt',
         'extractor_args': {'youtube': {'player_client': ['android']}},
         'postprocessors': [{
