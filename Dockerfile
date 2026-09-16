@@ -7,13 +7,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Installation et mise à jour forcée de yt-dlp
 COPY requirements.txt .
+# On installe la version master de yt-dlp pour avoir le tout dernier patch anti-bot YouTube
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir --upgrade yt-dlp
+    pip install --no-cache-dir -U https://github.com/yt-dlp/yt-dlp/archive/master.tar.gz
 
 COPY . .
 
-# Démarrage avec gunicorn sur le port d'écoute Render
 CMD ["sh", "-c", "gunicorn app:app --bind 0.0.0.0:${PORT:-5000} --workers 1 --threads 4 --timeout 120"]
